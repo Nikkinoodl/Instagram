@@ -1,5 +1,5 @@
 # Instagram
-Updated and simplified version of Mario Crippa's 2013 GIMP Instagram plugins. Free to download and use.
+Updated, consolidated and simplified version of Mario Crippa's 2013 GIMP Instagram plugins. Free to download and use.
 
 This GIMP plugin pulls most of the original Instagram effects into a single file. Deprecated elements in the originals have been
 replaced with their current counterparts. Some of the original effects have been simplified and changed to make the plug in more manageable:
