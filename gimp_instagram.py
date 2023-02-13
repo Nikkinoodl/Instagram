@@ -43,7 +43,7 @@ def CreateVignette(img, lg, w, h, type, opacity = 100, mode = 28, r = 0, g = 0, 
 		#Select an ellipse shape, invert selection and fill
 		SelectEllipse(img, w, h, type)
 		pdb.gimp_selection_invert(img)
-		AddFill(img, v, r, g, b)
+		AddFill(img, v, mode, r, g, b)
 		
 		return v
 
