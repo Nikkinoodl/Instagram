@@ -166,7 +166,7 @@ def Instagram(img, draw, effect):
 		pdb.gimp_levels(ml, 1, 0, 228, 1.0, 23, 255)
 		pdb.gimp_levels(ml, 2, 0, 255, 1.0, 3, 255)
 		pdb.gimp_levels(ml, 3, 0, 239, 1.0, 12, 255)
-		Pdb.gimp_brightness_contrast(ml, -8, 25)
+		pdb.gimp_brightness_contrast(ml, -8, 25)
 		
 		#adjust levels colors and brightness/contrast (again)
 		pdb.gimp_levels(ml, 0, 0, 255, 0.91, 7, 255)
