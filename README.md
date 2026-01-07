@@ -11,8 +11,9 @@ and they changed the way that I used photography in my artwork. I hope that this
 
 ![Ace-Poprocket-sm](https://github.com/Nikkinoodl/Instagram/assets/17559271/a4025984-15a7-45eb-af4b-3c0e2d28b844)
 
-To install, download the file the copy it to one of the following hidden locations shown below. If you have not already done do, it is much easier to find these folders if you make them visible — in Windows, you can do this from the menu bar in File Explorer.
-Note that for GIMP 3.0 the plugin must be installed in a subfolder with the same name as the plugin.
+o install, download the file and place it in the appropriate folder location. You can find this by selecting Edit/Preferences then navigating to Folder->Plugins from the GIMP menu. If you have not already done do, it is much easier to find these folders if you make them visible — in Windows, you can do this from the menu bar in File Explorer.
+
+Install the GIMP 2 plugin directly in this folder. Note that the GIMP 3 plugin must be installed inside a sub-folder with the same name as the plugin. The installation location will looks something like those shown below.
 
 Windows:
 
@@ -27,7 +28,8 @@ Linux:
 
 ```
 
-/usr/<username>/.config/GIMP/2.10/plugins
+/usr/<username>/.config/GIMP/2.10/plugins/gimp_instagram.py
+/usr/<username>/.config/GIMP/2.10/plugins/gimp_instagram/gimp_instagram.py
 
 ```
 
