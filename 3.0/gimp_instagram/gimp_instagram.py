@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 '''
 A complex GIMP 3 plugin that attempts to replicate the original Instagram effects. The plugin
@@ -37,7 +36,8 @@ effectsList = [
     ("WALDEN", "Walden")
 ]
 
-# Create a Gimp.Choice for the effects, as this is the preferred way to access the values in a dialog
+# Create a Gimp.Choice for the effects, as this is the preferred way to access the values in a dialog.
+# Identifier, index, label and description must be present.
 Effects = Gimp.Choice.new()
 
 for index, (identifier, label) in enumerate(effectsList):
@@ -111,7 +111,7 @@ class Instagram(Gimp.PlugIn):
 		return proc
 
 	def run(self, procedure, run_mode, image, drawables, config, data):
-
+		
 		Gegl.init(None)
 
 		# Drawable
@@ -121,7 +121,7 @@ class Instagram(Gimp.PlugIn):
         # foreground and background colors
 		image.undo_group_start()
 		Gimp.context_push()
-	
+
 	    # Show a dialog box to capture input parameters
 		if run_mode == Gimp.RunMode.INTERACTIVE:
 			GimpUi.init('instagram')
@@ -155,7 +155,7 @@ class Instagram(Gimp.PlugIn):
 		groupName = eName + " Group"
 		layerGroup = Gimp.GroupLayer.new(image, groupName)
 		Gimp.Image.insert_layer(image, layerGroup, None, 0)
-	
+
 		#create a layer that acts as the base image for effects
 		layer1 = self.AddLayerFromVisible(image, layerGroup, Layers.LAYER1)
 
@@ -178,7 +178,7 @@ class Instagram(Gimp.PlugIn):
 		#
 
 		if effect == "AMARO":
-			#adjust curves colors then create vignette.
+			#adjust curves colors then create vignette
 			layer1.curves_spline(Gimp.HistogramChannel.RED, [0, 30/255, 156/255, 196/255, 205/255, 203/255, 255/255, 255/255])
 			layer1.curves_spline(Gimp.HistogramChannel.GREEN, [0, 0, 61/255, 67/255, 139/255, 184/255, 200/255, 206/255, 1.0, 1.0])
 			layer1.curves_spline(Gimp.HistogramChannel.BLUE, [0, 20/255, 146/255, 184/255, 220/255, 222/255, 1.0, 1.0])
@@ -187,15 +187,15 @@ class Instagram(Gimp.PlugIn):
 			self.ColorToAlpha(layer1, 0.0, 0.78)
 
 			self.CreateVignette(image, layerGroup, w, h, Vignettes.STANDARD, 60)
-			
+		
 		elif effect == "APOLLO":
 			#copy image black and white then add vignette and green layer
 			self.AddLayerFromDrawable(drawable, image, layerGroup, Layers.BW, Gimp.LayerMode.NORMAL, True, 50)
 			self.CreateVignette(image, layerGroup, w, h, Vignettes.LARGE, 40)
 			self.AddColorLayer(image, Layers.COLOR, layerGroup, w, h, 50, Gimp.LayerMode.OVERLAY, 0.243, 0.804, 0.165)
-					
+		
 		elif effect == "BRANNAN":
-
+			
 			#copy image set to overlay and desaturate then adjust hue/saturation
 			layer2 = self.AddLayerFromDrawable(drawable, image, layerGroup, Layers.LAYER2, Gimp.LayerMode.OVERLAY, True, 37)
 			layer2.hue_saturation(Gimp.HueRange.ALL, 0, 0, -30, 0)
@@ -223,7 +223,7 @@ class Instagram(Gimp.PlugIn):
 			
 			#add new color layer in multiply mode. Color and opacity have been changed in this version.
 			self.AddColorLayer(image, Layers.COLOR, layerGroup, w, h, 35, Gimp.LayerMode.MULTIPLY, 0.99, 0.830, 0.480)
-			
+		
 		elif effect == "EARLYBIRD":
 			#adjust hue, saturation, lightness, colors and brightness/contrast
 			layer1.hue_saturation(Gimp.HueRange.ALL, 0, 1, -30, 0)
@@ -238,7 +238,7 @@ class Instagram(Gimp.PlugIn):
 			#add new color layer in multiply mode then add color vignette in normal mode
 			self.AddColorLayer(image, Layers.COLOR, layerGroup, w, h, 100, Gimp.LayerMode.MULTIPLY, 1.0, 240/255, 205/255)
 			self.CreateVignette(image, layerGroup, w, h, Vignettes.STANDARD, 6, Gimp.LayerMode.NORMAL, 0.722, 0.722, 0.722)
-				
+			
 		elif effect == "GOTHAM":
 			#desaturate base image
 			layer1.desaturate(Gimp.DesaturateMode.LIGHTNESS)
@@ -333,7 +333,7 @@ class Instagram(Gimp.PlugIn):
 			color1Mask = self.AddMask(color1, 1)
 			self.SelectEllipse(image, w, h, Vignettes.LARGE)
 			self.AddFill(image, color1Mask, Gimp.LayerMode.NORMAL, 1.0, 1.0, 1.0)
-				
+			
 		elif effect == "VALENCIA":
 			#add new layer in multiply mode
 			color1 = self.AddColorLayer(image, Layers.COLOR, layerGroup, w, h, 100, Gimp.LayerMode.MULTIPLY, 0.965, 0.867, 0.678)
@@ -371,15 +371,89 @@ class Instagram(Gimp.PlugIn):
 
 		return procedure.new_return_values(Gimp.PDBStatusType.SUCCESS, GLib.Error())	
 
-    #
-    # --- Effect methods and functions ----
+	#
+    # --- Methods invoking Gegl operations and PDB plugins ----
     #
 
-	#adds a new layer from the visible image
-	def AddLayerFromVisible(self, image, layerGroup, name):
-		layer = Gimp.Layer.new_from_visible(image, image, Layers.labels[name])
+	#adds a noise filter with default settings
+	def ColorToAlpha(self, layer, transpThresh = 0.0, opacityThresh = 1.0, r = 1.0, g = 1.0, b = 1.0):
+		# Apply the RGB noise effect
+		# Adapted from:  pdb.plug_in_rgb_noise(image, layer3, 0, 1, 0.10, 0.10, 0.10, 0)
+		# Initialize Gegl
+		Gegl.init(None)
+
+		# Add color for effect
+		fgColor = Gegl.Color.new('white')
+		fgColor.set_rgba(r, g, b, 0.0)
+
+		filter = Gimp.DrawableFilter.new(layer, "gegl:color-to-alpha", "Color to Alpha")
+		filter.set_blend_mode(Gimp.LayerMode.REPLACE)
+		filter.set_opacity(100)
+		config = filter.get_config()
+		config.set_property('color', fgColor)
+		config.set_property('transparency-threshold', transpThresh)
+		config.set_property('opacity-threshold', opacityThresh)
+		filter.update()
+		layer.append_filter(filter)
+		Gegl.exit()
+		return
+
+	#adds a linear motion blur with default settings
+	def AddMBlur(self, layer):
+		# Apply the motion blur effect
+		# Adapted from pdb.plug_in_mblur(image, layer3, 0, 256, 0, 0, 0) where type (0=LINEAR)
+		filter = Gimp.DrawableFilter.new(layer, "gegl:motion-blur-linear", "Motion blur")
+		filter.set_blend_mode(Gimp.LayerMode.NORMAL)
+		filter.set_opacity(100)
+		config = filter.get_config()
+		config.set_property('length', 256)
+		config.set_property('angle', 0)
+		filter.update()
+		layer.append_filter(filter)
+		return
+
+	#adds a noise filter with default settings
+	def AddNoise(self, layer):
+		# Apply the RGB noise effect
+		# Adapted from:  pdb.plug_in_rgb_noise(image, layer3, 0, 1, 0.10, 0.10, 0.10, 0)
+		filter = Gimp.DrawableFilter.new(layer, "gegl:noise-rgb", "Noise RGB")
+		filter.set_blend_mode(Gimp.LayerMode.NORMAL)
+		filter.set_opacity(100)
+		config = filter.get_config()
+		config.set_property('correlated', False)
+		config.set_property('independent', False)
+		config.set_property('linear', True)
+		config.set_property('gaussian', True)
+		config.set_property('red', 0.10)
+		config.set_property('alpha', 0)
+		filter.update()
+		layer.append_filter(filter)
+		return
+
+    #
+    # --- Utility methods and functions ----
+    #
+
+	#adds a layer with solid color fill in selected mode
+	def AddColorLayer(self, image, name, layerGroup, w, h, opacity, mode, r, g, b):
+		layer = self.AddLayer(image, layerGroup, w, h, name, opacity, mode)
+		self.AddFill(image, layer, mode, r, g, b)
+		
+		return layer
+
+	#adds a fill in specified mode and color (defaults to BLACK)
+	def AddFill(self, image, layer, mode = Gimp.LayerMode.NORMAL, r = 0.0, g = 0.0, b = 0.0):
+		self.SetContexts(mode, False, r, g, b)
+		layer.edit_fill(Gimp.FillType.FOREGROUND)
+		Gimp.Selection.none(image)
+		return
+
+	#adds a new layer with transparent fill
+	def AddLayer(self, image, layerGroup, w, h, name, opacity = 100, mode = Gimp.LayerMode.NORMAL):
+		layer = Gimp.Layer.new(image, Layers.labels[name], w, h, Gimp.ImageType.RGBA_IMAGE, opacity, mode)
 		image.insert_layer(layer, layerGroup, 0)
-
+		layer.fill(Gimp.FillType.TRANSPARENT)
+		
 		return layer
 
 	#adds a new layer from the drawable in selected mode
@@ -394,20 +468,34 @@ class Instagram(Gimp.PlugIn):
 
 		return layer
 
+	#adds a new layer from the visible image
+	def AddLayerFromVisible(self, image, layerGroup, name):
+		layer = Gimp.Layer.new_from_visible(image, image, Layers.labels[name])
+		image.insert_layer(layer, layerGroup, 0)
+
+		return layer
+
+	#adds a layer mask - fill(0) is white, fill(1) is black
+	def AddMask(self, layer, fill):
+		mask = layer.create_mask(fill)
+		layer.add_mask(mask)
+		
+		return mask
+	
 	#creates a vignette layer with an ellipse shape and selects the inverse area. Defaults to black vignette.
 	def CreateVignette(self, image, layerGroup, w, h, type, opacity = 100, mode = Gimp.LayerMode.NORMAL, r = 0.0, g = 0.0, b = 0.0):
-		vignetteLayer = self.AddLayer(image, layerGroup, w, h, Layers.VIGNETTE, opacity, mode)
-		image.set_selected_layers([vignetteLayer, None])
+		layer = self.AddLayer(image, layerGroup, w, h, Layers.VIGNETTE, opacity, mode)
+		image.set_selected_layers([layer, None])
 
 		if type == Vignettes.NONE:
-			return vignetteLayer
+			return layer
 		else:
 			#Select an ellipse shape, invert selection and fill
 			self.SelectEllipse(image, w, h, type)
 			Gimp.Selection.invert(image)
-			self.AddFill(image, vignetteLayer, mode, r, g, b)
+			self.AddFill(image, layer, mode, r, g, b)
 			
-			return vignetteLayer
+			return layer
 
 	#selects a feathered ellipse shape
 	def SelectEllipse(self, image, w, h, type):
@@ -427,85 +515,7 @@ class Instagram(Gimp.PlugIn):
 		#standardize the feather amount
 		feather = 0.20 * max(w, h)	
 		Gimp.Selection.feather(image, feather)
-
-	#adds a layer with solid color fill in selected mode
-	def AddColorLayer(self, image, name, layerGroup, w, h, opacity, mode, r, g, b):
-		colorLayer = self.AddLayer(image, layerGroup, w, h, name, opacity, mode)
-		self.AddFill(image, colorLayer, mode, r, g, b)
-		
-		return colorLayer
-
-	#adds a new layer with transparent fill
-	def AddLayer(self, image, layerGroup, w, h, name, opacity = 100, mode = Gimp.LayerMode.NORMAL):
-		addLayer = Gimp.Layer.new(image, Layers.labels[name], w, h, Gimp.ImageType.RGBA_IMAGE, opacity, mode)
-		image.insert_layer(addLayer, layerGroup, 0)
-		
-		return addLayer
-
-	#adds a layer mask - fill(0) is white, fill(1) is black
-	def AddMask(self, layer, fill):
-		mask = layer.create_mask(fill)
-		layer.add_mask(mask)
-		
-		return mask
-
-	#adds a fill in specified mode and color (defaults to BLACK)
-	def AddFill(self, image, layer, mode = Gimp.LayerMode.NORMAL, r = 0.0, g = 0.0, b = 0.0):
-		self.SetContexts(mode, False, r, g, b)
-		layer.edit_fill(Gimp.FillType.FOREGROUND)
-		Gimp.Selection.none(image)
-
-	#adds a linear motion blur with default settings
-	def AddMBlur(self, layer):
-			# Apply the motion blur effect
-			# Adapted from pdb.plug_in_mblur(image, layer3, 0, 256, 0, 0, 0) where type (0=LINEAR)
-			filter = Gimp.DrawableFilter.new(layer, "gegl:motion-blur-linear", "Motion blur")
-			filter.set_blend_mode(Gimp.LayerMode.NORMAL)
-			filter.set_opacity(100)
-			config = filter.get_config()
-			config.set_property('length', 256)
-			config.set_property('angle', 0)
-			filter.update()
-			layer.append_filter(filter)
-
-	#adds a noise filter with default settings
-	def AddNoise(self, layer):
-			# Apply the RGB noise effect
-			# Adapted from:  pdb.plug_in_rgb_noise(image, layer3, 0, 1, 0.10, 0.10, 0.10, 0)
-			filter = Gimp.DrawableFilter.new(layer, "gegl:noise-rgb", "Noise RGB")
-			filter.set_blend_mode(Gimp.LayerMode.NORMAL)
-			filter.set_opacity(100)
-			config = filter.get_config()
-			config.set_property('correlated', False)
-			config.set_property('independent', False)
-			config.set_property('linear', True)
-			config.set_property('gaussian', True)
-			config.set_property('red', 0.10)
-			config.set_property('alpha', 0)
-			filter.update()
-			layer.append_filter(filter)
-
-			#adds a noise filter with default settings
-	def ColorToAlpha(self, layer, transpThresh = 0.0, opacityThresh = 1.0, r = 1.0, g = 1.0, b = 1.0):
-			# Apply the RGB noise effect
-			# Adapted from:  pdb.plug_in_rgb_noise(image, layer3, 0, 1, 0.10, 0.10, 0.10, 0)
-			# Initialize Gegl
-			Gegl.init(None)
-
-			# Add color for effect
-			fgColor = Gegl.Color.new('white')
-			fgColor.set_rgba(r, g, b, 0.0)
-
-			filter = Gimp.DrawableFilter.new(layer, "gegl:color-to-alpha", "Color to Alpha")
-			filter.set_blend_mode(Gimp.LayerMode.REPLACE)
-			filter.set_opacity(100)
-			config = filter.get_config()
-			config.set_property('color',fgColor)
-			config.set_property('transparency-threshold', transpThresh)
-			config.set_property('opacity-threshold', opacityThresh)
-			filter.update()
-			layer.append_filter(filter)
-			Gegl.exit()
+		return
 
 	#sets contexts. Settings for all fills and gradients flow though here.
 	def SetContexts(self, mode, reverse = False, r = 0.0, g = 0.0, b = 0.0, opacity = 100, singleColor = True, r2 = 1.0, g2 = 1.0, b2 = 1.0):
@@ -532,6 +542,7 @@ class Instagram(Gimp.PlugIn):
 
 		# Clean up Gegl
 		Gegl.exit()
+		return
 
 # Entry point
 Gimp.main(Instagram.__gtype__, sys.argv)
