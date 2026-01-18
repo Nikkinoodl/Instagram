@@ -3,7 +3,7 @@ Updated, consolidated and simplified version of Mario Crippa's 2013 GIMP Instagr
 
 This GIMP plugin is now available for both 2.10 and 3.0 versions. It pulls most of the original Instagram effects into a single file. Deprecated elements in the originals have been
 replaced with their current counterparts. Some of the original effects have been simplified and changed to make the plugin more manageable:
-for example, borders have been removed entirely and some of the vignettes have been simplified.
+for example, borders have been removed entirely and some of the vignettes have been simplified. Please note that there appears to be an issue with Gimp 3.0 which prevents some of the color adjustments from being applied correctly and the effects may look different in each version.
 
 I have often used the original version of these plugins to help when painting landscapes from photographs. Some
 of the effects can be extremely helpful in breaking free of the typical green palette of the Virginia piedmont, 
