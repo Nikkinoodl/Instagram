@@ -7,7 +7,7 @@ and the individual effects have been consolidated into a single plugin. After mi
 different versions of GIMP, the effects have evolved away from the originals.
 '''
 
-import sys, gi
+import sys, math, gi
 
 gi.require_version('Gegl', '0.4')
 gi.require_version("Gimp", "3.0")
@@ -150,16 +150,15 @@ class Instagram(Gimp.PlugIn):
 		# --- Base code used for all effects ---
 		#
 
-		#create group
+		# Create group and a layer that acts as the base image for effects
 		eName = Gimp.Choice.get_label(Effects, effect)
 		groupName = eName + " Group"
 		layerGroup = Gimp.GroupLayer.new(image, groupName)
 		Gimp.Image.insert_layer(image, layerGroup, None, 0)
 
-		#create a layer that acts as the base image for effects
 		layer1 = self.AddLayerFromVisible(image, layerGroup, Layers.LAYER1)
 
-		#calculate image dimensions and some common coordinates
+		# Calculate image dimensions and some common coordinates
 		Gimp.Selection.all(image)
 		sel_size = Gimp.Selection.bounds(image)
 		w = sel_size.x2 - sel_size.x1
@@ -178,10 +177,10 @@ class Instagram(Gimp.PlugIn):
 		#
 
 		if effect == "AMARO":
-			#adjust curves colors then create vignette
-			layer1.curves_spline(Gimp.HistogramChannel.RED, [0, 30/255, 156/255, 196/255, 205/255, 203/255, 255/255, 255/255])
-			layer1.curves_spline(Gimp.HistogramChannel.GREEN, [0, 0, 61/255, 67/255, 139/255, 184/255, 200/255, 206/255, 1.0, 1.0])
-			layer1.curves_spline(Gimp.HistogramChannel.BLUE, [0, 20/255, 146/255, 184/255, 220/255, 222/255, 1.0, 1.0])
+			#adjust curves colors in non-linear space then create vignette
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.RED, [0, 30/255, 156/255, 196/255, 205/255, 203/255, 255/255, 255/255])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.GREEN, [0, 0, 61/255, 67/255, 139/255, 184/255, 200/255, 206/255, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.BLUE, [0, 20/255, 146/255, 184/255, 220/255, 222/255, 1.0, 1.0])
 			
 			#effect added to GIMP 3 version
 			self.ColorToAlpha(layer1, 0.0, 0.78)
@@ -195,7 +194,6 @@ class Instagram(Gimp.PlugIn):
 			self.AddColorLayer(image, Layers.COLOR, layerGroup, w, h, 50, Gimp.LayerMode.OVERLAY, 0.243, 0.804, 0.165)
 		
 		elif effect == "BRANNAN":
-			
 			#copy image set to overlay and desaturate then adjust hue/saturation
 			layer2 = self.AddLayerFromDrawable(drawable, image, layerGroup, Layers.LAYER2, Gimp.LayerMode.OVERLAY, True, 37)
 			layer2.hue_saturation(Gimp.HueRange.ALL, 0, 0, -30, 0)
@@ -245,29 +243,27 @@ class Instagram(Gimp.PlugIn):
 			
 			#copy image in hard light mode and adjust color curves
 			layer2 = self.AddLayerFromDrawable(drawable, image, layerGroup, Layers.LAYER2, Gimp.LayerMode.HARDLIGHT)
-			layer2.curves_spline(Gimp.HistogramChannel.BLUE, [0, 0, 63/255, 98/255, 128/255, 128/255, 189/255, 159/255, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer2, Gimp.HistogramChannel.BLUE, [0, 0, 63/255, 98/255, 128/255, 128/255, 189/255, 159/255, 1.0, 1.0])
 			
 			#add new layer in screen mode then add blur and noise
 			layer3 = self.AddLayerFromDrawable(drawable, image, layerGroup, Layers.LAYER3, Gimp.LayerMode.SCREEN, False, 75)
 			
-			# Apply a motion blur effect
+			# Apply a motion blur and RGB noise effects
 			self.AddMBlur(layer3)
-
-			# Apply an RGB noise effect
 			self.AddNoise(layer3)
 
 		elif effect == "INKWELL":
 			#desaturate, adjust color curves and brightness/contrast
 			layer1.desaturate(Gimp.DesaturateMode.LIGHTNESS)
-			layer1.curves_spline(Gimp.HistogramChannel.VALUE, [0.0, 0.0, 0.051, 0.0, 0.325, 0.490, 0.698, 0.859, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.VALUE, [0.0, 0.0, 0.051, 0.0, 0.325, 0.490, 0.698, 0.859, 1.0, 1.0])
 			layer1.brightness_contrast(-0.15, 0.15)
 		
 		elif effect == "LORDKELVIN":
 			#adjust color curves
-			layer1.curves_spline(Gimp.HistogramChannel.VALUE, [10/255, 0, 1.0, 1.0])
-			layer1.curves_spline(Gimp.HistogramChannel.RED, [0, 63/255, 100/255, 200/255, 1.0, 1.0])
-			layer1.curves_spline(Gimp.HistogramChannel.GREEN, [0, 30/255, 180/255, 190/255, 1.0, 210/255])
-			layer1.curves_spline(Gimp.HistogramChannel.BLUE, [0, 90/255, 177/255, 114/255, 1.0, 188/255])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.VALUE, [10/255, 0, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.RED, [0, 63/255, 100/255, 200/255, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.GREEN, [0, 30/255, 180/255, 190/255, 1.0, 210/255])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.BLUE, [0, 90/255, 177/255, 114/255, 1.0, 188/255])
 		
 		elif effect == "POPROCKET":
 			#add color1 in screen mode and set color gradient
@@ -306,7 +302,7 @@ class Instagram(Gimp.PlugIn):
 		elif effect == "TOASTER":
 			#add new layer and adjust color curves
 			layer2 = self.AddLayerFromDrawable(drawable, image, layerGroup, Layers.LAYER2)
-			layer2.curves_spline(Gimp.HistogramChannel.VALUE, [25/255, 0, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer2, Gimp.HistogramChannel.VALUE, [25/255, 0, 1.0, 1.0])
 			
 			#add white mask to layer and create black filled ellipse
 			layer2Mask = self.AddMask(layer2, 0)
@@ -340,21 +336,21 @@ class Instagram(Gimp.PlugIn):
 			
 			#merge down then adjust color curves and levels
 			mergeLayer = image.merge_down(color1, Gimp.MergeType.CLIP_TO_IMAGE)
-			mergeLayer.curves_spline(Gimp.HistogramChannel.VALUE, [0, 50/255, 75/255, 110/255, 175/255, 220/255, 1.0, 1.0])
+			self.SRGBCurvesSpline(mergeLayer, Gimp.HistogramChannel.VALUE, [0, 50/255, 75/255, 110/255, 175/255, 220/255, 1.0, 1.0])
 			mergeLayer.levels(Gimp.HistogramChannel.BLUE, 0, 1.0, True, 1.0, 126/255, 1.0, True)
 			self.ColorToAlpha(mergeLayer, 0.0, 0.78)
 		
 		elif effect == "WALDEN":
 			#adjust color curves
-			layer1.curves_spline(Gimp.HistogramChannel.VALUE, [12/255, 0, 1.0, 1.0])
-			layer1.curves_spline(Gimp.HistogramChannel.RED, [10/255, 0, 247/255, 1.0])
-			layer1.curves_spline(Gimp.HistogramChannel.BLUE, [0, 38/255, 1.0, 203/255])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.VALUE, [12/255, 0, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.RED, [10/255, 0, 247/255, 1.0])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.BLUE, [0, 38/255, 1.0, 203/255])
 
 			#adjust levels and color curves (again)
 			layer1.levels(Gimp.HistogramChannel.VALUE, 0, 235/255, True, 1.17, 55/255, 1.0, True)
-			layer1.curves_spline(Gimp.HistogramChannel.VALUE, [41/255, 0, 125/255, 124/255, 1.0, 1.0])
+			self.SRGBCurvesSpline(layer1, Gimp.HistogramChannel.VALUE, [41/255, 0, 125/255, 124/255, 1.0, 1.0])
 			
-			#Create new layer in soft light mode
+			#create new layer in soft light mode
 			gradient = self.AddLayer(image, layerGroup, w, h, Layers.GRADIENT, 80, Gimp.LayerMode.SOFTLIGHT)
 			
 			#set contexts and apply gradient in soft light mode starting from top left
@@ -375,13 +371,7 @@ class Instagram(Gimp.PlugIn):
     # --- Methods invoking Gegl operations and PDB plugins ----
     #
 
-	#adds a noise filter with default settings
 	def ColorToAlpha(self, layer, transpThresh = 0.0, opacityThresh = 1.0, r = 1.0, g = 1.0, b = 1.0):
-		# Apply the RGB noise effect
-		# Adapted from:  pdb.plug_in_rgb_noise(image, layer3, 0, 1, 0.10, 0.10, 0.10, 0)
-		# Initialize Gegl
-		Gegl.init(None)
-
 		# Add color for effect
 		fgColor = Gegl.Color.new('white')
 		fgColor.set_rgba(r, g, b, 0.0)
@@ -395,12 +385,10 @@ class Instagram(Gimp.PlugIn):
 		config.set_property('opacity-threshold', opacityThresh)
 		filter.update()
 		layer.append_filter(filter)
-		Gegl.exit()
 		return
 
 	#adds a linear motion blur with default settings
 	def AddMBlur(self, layer):
-		# Apply the motion blur effect
 		# Adapted from pdb.plug_in_mblur(image, layer3, 0, 256, 0, 0, 0) where type (0=LINEAR)
 		filter = Gimp.DrawableFilter.new(layer, "gegl:motion-blur-linear", "Motion blur")
 		filter.set_blend_mode(Gimp.LayerMode.NORMAL)
@@ -414,7 +402,6 @@ class Instagram(Gimp.PlugIn):
 
 	#adds a noise filter with default settings
 	def AddNoise(self, layer):
-		# Apply the RGB noise effect
 		# Adapted from:  pdb.plug_in_rgb_noise(image, layer3, 0, 1, 0.10, 0.10, 0.10, 0)
 		filter = Gimp.DrawableFilter.new(layer, "gegl:noise-rgb", "Noise RGB")
 		filter.set_blend_mode(Gimp.LayerMode.NORMAL)
@@ -519,8 +506,6 @@ class Instagram(Gimp.PlugIn):
 
 	#sets contexts. Settings for all fills and gradients flow though here.
 	def SetContexts(self, mode, reverse = False, r = 0.0, g = 0.0, b = 0.0, opacity = 100, singleColor = True, r2 = 1.0, g2 = 1.0, b2 = 1.0):
-		# Initialize Gegl
-		Gegl.init(None)
 		Gimp.context_set_opacity(opacity)
 		Gimp.context_set_paint_mode(mode)
 		Gimp.context_set_gradient_blend_color_space(Gimp.GradientBlendColorSpace.RGB_LINEAR)
@@ -540,9 +525,52 @@ class Instagram(Gimp.PlugIn):
 		else:
 			Gimp.context_set_gradient_fg_bg_rgb()
 
-		# Clean up Gegl
-		Gegl.exit()
 		return
+	
+	#
+	# --- Methods for applying curves_spline in non-linear space ---
+	#
+
+	def SRGBCurvesSpline(self, drawable, channel, spline):
+			# Build LUTs (or cache them globally)
+			lin_lut, srgb_lut = self.FastSRGBLuts()
+		
+			# Apply sRGB -> linear LUT
+			drawable.curves_explicit(channel, lin_lut)
+
+			# Apply spline in linear space
+			drawable.curves_spline(channel, spline)
+
+			# Convert back linear -> sRGB
+			drawable.curves_explicit(channel, srgb_lut)
+
+	def FastSRGBLuts(self, samplecount=1024):
+		pow = math.pow
+		sc = samplecount - 1.0
+
+		# sRGB -> linear
+		linofx = [
+			(x * 12.92) if x < 0.0031308
+			else (1.055 * pow(x, 1.0/2.4) - 0.055)
+			for x in (i / sc for i in range(samplecount))
+		]
+
+		# linear -> sRGB
+		srgbofx = [
+			(x / 12.92) if x < 0.04045
+			else pow((x + 0.055) / 1.055, 2.4)
+			for x in (i / sc for i in range(samplecount))
+		]
+
+		return linofx, srgbofx
+
+	def ConvertSRGBToLinear(self, values, lin_lut):
+		sc = len(lin_lut) - 1
+		return [lin_lut[int(v * sc)] for v in values]
+
+	def ConvertLinearToSRGB(self, values, srgb_lut):
+		sc = len(srgb_lut) - 1
+		return [srgb_lut[int(v * sc)] for v in values]
 
 # Entry point
 Gimp.main(Instagram.__gtype__, sys.argv)
