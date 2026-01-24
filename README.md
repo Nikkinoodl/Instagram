@@ -3,8 +3,7 @@ Updated, consolidated and simplified version of Mario Crippa's 2013 GIMP Instagr
 
 This GIMP plugin is now available for both 2.10 and 3.0 versions. It pulls most of the original Instagram effects into a single file. Deprecated elements in the originals 
 have been replaced with their current counterparts. Some of the original effects have been simplified and changed to make the plugin more manageable.
-Borders have been removed entirely and some of the vignettes have been simplified. The Gimp 3.0 version has a workaround to the limitation of
-the Gimp.Drawable.curves_spline method only being implemented in linear space.
+Borders have been removed entirely and some of the vignettes have been simplified. The Gimp 3.0 version contains a re-usable workaround that enables the Gimp.Drawable.curves_spline method to be used in non-linear space.
 
 I have often used the original version of these plugins to help when painting landscapes from photographs. Some
 of the effects can be extremely helpful in breaking free of the typical green palette of the Virginia piedmont, 
